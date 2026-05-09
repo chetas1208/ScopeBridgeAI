@@ -17,6 +17,10 @@ model User {
   accounts      Account[]
   sessions      Session[]
   memberships   WorkspaceMember[]
+  uploadedAssets UploadedAsset[]
+  promptRuns    PromptRun[]
+  sessionMemories SessionMemory[]
+  memorySnapshots MemorySnapshot[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -59,16 +63,22 @@ model VerificationToken {
 // ── ScopeBridge Core Models ─────────────────────────────────────────────
 
 model Workspace {
-  id               String             @id @default(cuid())
-  name             String
-  slug             String             @unique
-  members          WorkspaceMember[]
+  id                String              @id @default(cuid())
+  name              String
+  slug              String              @unique
+  members           WorkspaceMember[]
   connectedAccounts ConnectedAccount[]
-  sourceItems      SourceItem[]
-  auditRuns        AuditRun[]
-  risks            DeliveryRisk[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  sourceItems       SourceItem[]
+  auditRuns         AuditRun[]
+  risks             DeliveryRisk[]
+  contextDocuments  ContextDocument[]
+  uploadedAssets    UploadedAsset[]
+  promptRuns        PromptRun[]
+  sessionMemories   SessionMemory[]
+  memorySnapshots   MemorySnapshot[]
+  connectorSyncJobs ConnectorSyncJob[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model WorkspaceMember {
@@ -80,39 +90,49 @@ model WorkspaceMember {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
 }
 
 model ConnectedAccount {
-  id                   String    @id @default(cuid())
-  workspaceId          String
-  provider             String    // gmail, slack, github
-  providerAccountId    String
-  encryptedAccessToken String    @db.Text
-  encryptedRefreshToken String?  @db.Text
-  expiresAt            DateTime?
-  scopes               String?
-  status               String    @default("active") // active, error, disconnected
-  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  provider              String    // gmail, slack, github
+  providerAccountId     String?
+  encryptedAccessToken  String    @db.Text
+  encryptedRefreshToken String?   @db.Text
+  expiresAt             DateTime?
+  scopes                String?
+  status                String    @default("active") // active, error, disconnected
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  @@unique([workspaceId, provider, providerAccountId])
+  @@unique([workspaceId, provider])
+  @@index([workspaceId])
+  @@index([provider])
 }
 
 model SourceItem {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   workspaceId String
-  sourceType  String    // gmail, slack, github, manual, upload
+  sourceType  String         // gmail, slack, github, manual, upload
   externalId  String?
   title       String
-  content     String    @db.Text
+  content     String         @db.Text
   author      String?
   url         String?
   metadata    Json?
+  tokenCount  Int            @default(0)
   occurredAt  DateTime
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  evidence    RiskEvidence[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([workspaceId])
+  @@index([sourceType])
+  @@index([workspaceId, sourceType])
 }
 
 model AuditRun {
@@ -125,49 +145,205 @@ model AuditRun {
   workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+
+  @@index([workspaceId])
+  @@index([createdAt])
 }
 
 model DeliveryRisk {
-  id                 String         @id @default(cuid())
+  id                 String           @id @default(cuid())
   workspaceId        String
   auditRunId         String?
-  type               String         // missing_ticket, scope_drift, contradiction, blocker, deadline_risk, ownership_gap, forgotten_commitment
-  severity           String         // low, medium, high, critical
+  type               String           // missing_ticket, scope_drift, contradiction, blocker, deadline_risk, ownership_gap, forgotten_commitment
+  category           String?          // missing_ticket, contradiction, scope_drift, blocked_backend, stale_promise, repo_risk, other
+  severity           String           // low, medium, high, critical
   title              String
-  clientPromise      String         @db.Text
-  engineeringReality String         @db.Text
-  evidenceQuote      String         @db.Text
+  clientPromise      String           @db.Text
+  engineeringReality String           @db.Text
+  evidenceQuote      String           @db.Text
+  missingInformation Json?
   confidence         Float
-  recommendedAction  String         @db.Text
-  status             String         @default("active") // active, reviewed, mitigated
+  recommendedAction  String           @db.Text
+  status             String           @default("active") // active, reviewed, mitigated, dismissed
+  evidence           RiskEvidence[]
   actionDrafts       ActionDraft[]
   actionExecutions   ActionExecution[]
-  workspace          Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  auditRun           AuditRun?      @relation(fields: [auditRunId], references: [id], onDelete: SetNull)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  auditRun           AuditRun?        @relation(fields: [auditRunId], references: [id], onDelete: SetNull)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([severity])
+  @@index([createdAt])
 }
 
 model ActionDraft {
-  id          String       @id @default(cuid())
-  riskId      String
-  type        String       // email, slack, github_issue, github_pr
-  title       String
-  body        String       @db.Text
-  target      String?      // e.g., email address, slack channel id, github repo name
-  risk        DeliveryRisk @relation(fields: [riskId], references: [id], onDelete: Cascade)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                   String           @id @default(cuid())
+  riskId               String?
+  workspaceId          String?
+  type                 String           // email, slack, github_issue, github_pr, memory_update
+  title                String
+  body                 String           @db.Text
+  target               String?          // e.g., email address, slack channel id, github repo name
+  status               String           @default("pending") // pending, approved, rejected, executed
+  requiresConfirmation Boolean          @default(true)
+  risk                 DeliveryRisk?    @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  executions           ActionExecution[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([riskId])
+  @@index([workspaceId])
+  @@index([status])
 }
 
 model ActionExecution {
-  id          String       @id @default(cuid())
-  riskId      String
-  type        String       // email, slack, github_issue, github_pr
-  status      String       // pending, success, failed
+  id          String        @id @default(cuid())
+  riskId      String?
+  draftId     String?
+  workspaceId String?
+  type        String        // email, slack, github_issue, github_pr
+  status      String        // pending, success, failed
+  result      Json?
   externalUrl String?
-  errorMsg    String?      @db.Text
-  risk        DeliveryRisk @relation(fields: [riskId], references: [id], onDelete: Cascade)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  errorMsg    String?       @db.Text
+  risk        DeliveryRisk? @relation(fields: [riskId], references: [id], onDelete: SetNull)
+  draft       ActionDraft?  @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([riskId])
+  @@index([draftId])
+  @@index([workspaceId])
+}
+
+// ── New Models ──────────────────────────────────────────────────────────
+
+model RiskEvidence {
+  id           String        @id @default(cuid())
+  riskId       String
+  sourceItemId String?
+  sourceType   String        // gmail, slack, github, manual, image, file, hydradb
+  sourceId     String
+  quote        String        @db.Text
+  timestamp    DateTime?
+  risk         DeliveryRisk  @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  sourceItem   SourceItem?   @relation(fields: [sourceItemId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+
+  @@index([riskId])
+  @@index([sourceItemId])
+  @@index([sourceType])
+}
+
+model ContextDocument {
+  id          String    @id @default(cuid())
+  workspaceId String
+  title       String
+  content     String    @db.Text
+  sourceType  String    // upload, manual, github, notion
+  tokenCount  Int       @default(0)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([sourceType])
+}
+
+model UploadedAsset {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  userId        String
+  filename      String
+  mimeType      String
+  sizeBytes     Int
+  storageKey    String
+  extractedText String?   @db.Text
+  tokenCount    Int       @default(0)
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model PromptRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  prompt      String    @db.Text
+  response    String?   @db.Text
+  model       String
+  tokensIn    Int       @default(0)
+  tokensOut   Int       @default(0)
+  latencyMs   Int       @default(0)
+  status      String    @default("pending") // pending, complete, failed
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SessionMemory {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  kind        String    // commitment, project_fact, risk_pattern, user_preference, session_summary
+  text        String    @db.Text
+  metadata    Json?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([workspaceId, userId])
+}
+
+model MemorySnapshot {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  userId         String
+  hydraMemoryId  String?
+  kind           String    // commitment, project_fact, risk_pattern, user_preference, session_summary
+  text           String    @db.Text
+  confidence     Float
+  status         String    @default("pending") // pending, accepted, rejected
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([workspaceId, status])
+}
+
+model ConnectorSyncJob {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  provider     String    // gmail, slack, github
+  status       String    @default("pending") // pending, running, complete, failed
+  itemsSynced  Int       @default(0)
+  errorMsg     String?   @db.Text
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([provider])
+  @@index([status])
+  @@index([workspaceId, provider])
 }

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   // Simulate OAuth connection by just creating a connected account
   await db.connectedAccount.upsert({
-    where: { workspaceId_provider_providerAccountId: { workspaceId: workspace.id, provider, providerAccountId: "simulated-id" } },
+    where: { workspaceId_provider: { workspaceId: workspace.id, provider } },
     create: {
       workspaceId: workspace.id,
       provider,
