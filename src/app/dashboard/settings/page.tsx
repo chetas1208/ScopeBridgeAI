@@ -1,8 +1,34 @@
 "use client";
-import React from "react";
-import { Settings, Shield, Key } from "lucide-react";
+import React, { useState } from "react";
+import { Shield, Key, Check } from "lucide-react";
 
 export default function SettingsPage() {
+  const [workspaceName, setWorkspaceName] = useState("Acme Corp Delivery");
+  const [tokenBudget, setTokenBudget] = useState("128000");
+  const [saved, setSaved] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [wiped, setWiped] = useState(false);
+
+  function saveChanges() {
+    localStorage.setItem("sb_workspace_name", workspaceName);
+    localStorage.setItem("sb_token_budget", tokenBudget);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  function handleWipe() {
+    if (!confirmWipe) {
+      setConfirmWipe(true);
+      return;
+    }
+    localStorage.clear();
+    setWorkspaceName("New Workspace");
+    setTokenBudget("128000");
+    setConfirmWipe(false);
+    setWiped(true);
+    setTimeout(() => setWiped(false), 3000);
+  }
+
   return (
     <div className="max-w-3xl mx-auto fade-in">
       <div className="mb-8">
@@ -19,17 +45,31 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Workspace Name</label>
-              <input type="text" defaultValue="Acme Corp Delivery" className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50" />
+              <input
+                type="text"
+                value={workspaceName}
+                onChange={e => setWorkspaceName(e.target.value)}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Context Token Budget</label>
-              <select className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50">
-                <option>128,000 (Maximum)</option>
-                <option>64,000 (Optimized)</option>
-                <option>32,000 (Fast)</option>
+              <select
+                value={tokenBudget}
+                onChange={e => setTokenBudget(e.target.value)}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
+              >
+                <option value="128000">128,000 (Maximum)</option>
+                <option value="64000">64,000 (Optimized)</option>
+                <option value="32000">32,000 (Fast)</option>
               </select>
             </div>
-            <button className="btn-primary px-4 py-2 mt-2">Save Changes</button>
+            <button
+              className="btn-primary px-4 py-2 mt-2 flex items-center gap-2"
+              onClick={saveChanges}
+            >
+              {saved ? <><Check className="w-4 h-4" /> Saved!</> : "Save Changes"}
+            </button>
           </div>
         </div>
 
@@ -38,10 +78,35 @@ export default function SettingsPage() {
             <Key className="w-5 h-5 text-rose-400" />
             <h2 className="text-base font-semibold text-rose-400">Danger Zone</h2>
           </div>
-          <p className="text-sm text-[var(--text-secondary)] mb-4">Disconnect all integrations and wipe cached source data from this workspace. This action cannot be undone.</p>
-          <button className="px-4 py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-lg text-sm font-medium hover:bg-rose-500/20 transition-colors">
-            Wipe Workspace Data
-          </button>
+          {wiped ? (
+            <p className="text-sm text-emerald-400 mb-4">Workspace data wiped successfully.</p>
+          ) : (
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
+              {confirmWipe
+                ? "Are you sure? This will wipe all local workspace data. This cannot be undone."
+                : "Disconnect all integrations and wipe cached source data from this workspace. This action cannot be undone."}
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                confirmWipe
+                  ? "bg-rose-500 text-white border-rose-500 hover:bg-rose-600"
+                  : "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+              }`}
+              onClick={handleWipe}
+            >
+              {confirmWipe ? "Confirm Wipe" : "Wipe Workspace Data"}
+            </button>
+            {confirmWipe && (
+              <button
+                className="btn-secondary px-4 py-2 rounded-lg text-sm"
+                onClick={() => setConfirmWipe(false)}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
