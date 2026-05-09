@@ -32,7 +32,7 @@ export const env = {
   GOOGLE_REDIRECT_URI: () =>
     optional(
       "GOOGLE_REDIRECT_URI",
-      `${optional("NEXT_PUBLIC_APP_URL", "http://localhost:3000")}/api/integrations/gmail/callback`
+      `${optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app")}/api/integrations/gmail/callback`
     ),
 
   SLACK_CLIENT_ID: () => required("SLACK_CLIENT_ID"),
@@ -41,14 +41,14 @@ export const env = {
   SLACK_REDIRECT_URI: () =>
     optional(
       "SLACK_REDIRECT_URI",
-      `${optional("NEXT_PUBLIC_APP_URL", "http://localhost:3000")}/api/integrations/slack/callback`
+      `${optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app")}/api/integrations/slack/callback`
     ),
 
   GITHUB_CLIENT_ID: () => required("GITHUB_CLIENT_ID"),
   GITHUB_CLIENT_SECRET: () => required("GITHUB_CLIENT_SECRET"),
   GITHUB_TOKEN: () => required("GITHUB_TOKEN"),
 
-  NEXT_PUBLIC_APP_URL: () => optional("NEXT_PUBLIC_APP_URL", "http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: () => optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app"),
 
   DEMO_MODE: () => process.env.DEMO_MODE === "true",
 

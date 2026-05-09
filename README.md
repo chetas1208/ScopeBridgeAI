@@ -81,7 +81,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app runs at `http://localhost:3000`.
+The app runs at `https://scope-bridge-ai.vercel.app`.
 
 **No database or API keys needed for demo mode.** The app works fully with demo data.
 
