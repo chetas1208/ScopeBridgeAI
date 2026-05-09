@@ -44,9 +44,14 @@ export const env = {
       `${optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app")}/api/integrations/slack/callback`
     ),
 
-  GITHUB_CLIENT_ID: () => required("GITHUB_CLIENT_ID"),
-  GITHUB_CLIENT_SECRET: () => required("GITHUB_CLIENT_SECRET"),
-  GITHUB_TOKEN: () => required("GITHUB_TOKEN"),
+  GITHUB_CLIENT_ID: () => optional("GITHUB_CLIENT_ID"),
+  GITHUB_CLIENT_SECRET: () => optional("GITHUB_CLIENT_SECRET"),
+  GITHUB_TOKEN: () => optional("GITHUB_TOKEN"),
+  GITHUB_REDIRECT_URI: () =>
+    optional(
+      "GITHUB_REDIRECT_URI",
+      `${optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app")}/api/integrations/github/callback`
+    ),
 
   NEXT_PUBLIC_APP_URL: () => optional("NEXT_PUBLIC_APP_URL", "https://scope-bridge-ai.vercel.app"),
 

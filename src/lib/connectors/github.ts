@@ -58,7 +58,7 @@ const GITHUB_SCOPES = "repo,read:user,user:email";
 export function buildGitHubAuthUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: env.GITHUB_CLIENT_ID(),
-    redirect_uri: `${env.NEXT_PUBLIC_APP_URL()}/api/integrations/github/callback`,
+    redirect_uri: env.GITHUB_REDIRECT_URI(),
     scope: GITHUB_SCOPES,
     state,
   });
@@ -79,7 +79,7 @@ export async function exchangeGitHubCode(code: string): Promise<{
       client_id: env.GITHUB_CLIENT_ID(),
       client_secret: env.GITHUB_CLIENT_SECRET(),
       code,
-      redirect_uri: `${env.NEXT_PUBLIC_APP_URL()}/api/integrations/github/callback`,
+      redirect_uri: env.GITHUB_REDIRECT_URI(),
     }),
   });
 
