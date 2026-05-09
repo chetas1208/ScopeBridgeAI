@@ -41,10 +41,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# User specified ignores
 check-apis.js
 DEMO_SCRIPT.md
 Prompt.txt
 stitch_contextpilot_ai_chief_of_staff.zip
-.next
-reference_designs
-node_modules
+.next/
+reference_designs/
+node_modules/
